@@ -131,6 +131,8 @@ GenHeader_3 = construct.Struct(
 # SSN=GenHeader_3.parse(BINDATA)["ss"]
 
 ChanSetHeader_def =[]
+'''below section---Scan type header --- should be repeated for 16 times,
+a loop should be designed'''
 ####---------------- Scan type header (Channel set descriptor ) from 1 to 16 ------####
 ChanSetHeader_01 = construct.Struct(
 		# "Byte1_2"	/ construct.BitStruct(
@@ -166,22 +168,30 @@ ChanSetHeader_01 = construct.Struct(
 	"cabN"  /Int8ub,   #31    Streamer number
 	"ary"     /Int8ub,   #32    Array forming
 )
-FD = open(BINARYFILE, 'rb')
-N =32
-FD.seek(N*3)  #omit the first N bytes on begining of SEG-D file
-BINDATA = FD.read(32)  #define reading block's length
-ScanType=ChanSetHeader_01.parse(BINDATA)["st"]
-ChanSetN=ChanSetHeader_01.parse(BINDATA)["cn"]
-TimeStart=str(ChanSetHeader_01.parse(BINDATA)["tf"]) + " ms"
-TimeEnd=str(2*ChanSetHeader_01.parse(BINDATA)["te"]) +" ms"
-DescaleMultip=ChanSetHeader_01.parse(BINDATA)["mp"]
-DescaleMultip=ChanSetHeader_01.parse(BINDATA)["cs"]
-AliasFF=ChanSetHeader_01.parse(BINDATA)["af"]
-AliasFS=ChanSetHeader_01.parse(BINDATA)["as"]
-LowCutF=ChanSetHeader_01.parse(BINDATA)["lc"]
-LowCutS=ChanSetHeader_01.parse(BINDATA)["ls"]
-Byte11_12=ChanSetHeader_01.parse(BINDATA)["Byte11_12"]
-Byte29=ChanSetHeader_01.parse(BINDATA)["Byte29"]
-CableNum=ChanSetHeader_01.parse(BINDATA)["cabN"]
+# FD = open(BINARYFILE, 'rb')
+# N =32
+# FD.seek(N*3)  #omit the first N bytes on begining of SEG-D file
+# BINDATA = FD.read(32)  #define reading block's length
+# ScanType=ChanSetHeader_01.parse(BINDATA)["st"]
+# ChanSetN=ChanSetHeader_01.parse(BINDATA)["cn"]
+# TimeStart=str(ChanSetHeader_01.parse(BINDATA)["tf"]) + " ms"
+# TimeEnd=str(2*ChanSetHeader_01.parse(BINDATA)["te"]) +" ms"
+# DescaleMultip=ChanSetHeader_01.parse(BINDATA)["mp"]
+# DescaleMultip=ChanSetHeader_01.parse(BINDATA)["cs"]
+# AliasFF=ChanSetHeader_01.parse(BINDATA)["af"]
+# AliasFS=ChanSetHeader_01.parse(BINDATA)["as"]
+# LowCutF=ChanSetHeader_01.parse(BINDATA)["lc"]
+# LowCutS=ChanSetHeader_01.parse(BINDATA)["ls"]
+# Byte11_12=ChanSetHeader_01.parse(BINDATA)["Byte11_12"]
+# Byte29=ChanSetHeader_01.parse(BINDATA)["Byte29"]
+# CableNum=ChanSetHeader_01.parse(BINDATA)["cabN"]
+
+####---------------- Extended header ( ) 1024Bytes --------------------------------------####
+##TODO here
+
+####---------------- External header ( ) 4096Bytes --------------------------------------####
+##TODO here
+
+##----------------------------------------------------------------------------------------------------## 
 FD.close()
 logging.debug('End of program')
