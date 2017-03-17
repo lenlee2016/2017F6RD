@@ -40,37 +40,37 @@ BINARYFILE = 'D:/Tools/run/2017F6RD_backs/00000759.segd'
 # FOr  SERCEL SEAL408&428 SEG-D data version1.0
 ####---------------- General header block #1 -------------------------####
 GenHeader_1 = construct.BitStruct(
-	"FileNumber"				   /Nibble[4],  	
-	"FormatCode"			   /Nibble[4],		##8058 32 IEEE demultiplexed
-	"k1_k12"          		  	   /Nibble[12],	##General Constants, from k1 to k12 #
-	"Year"						   /Nibble[2],
-	"HDR"						   /Nibble,
-	"Julian Day"   			   /Nibble[3],
-	"Hour"						   /Nibble[2],
-	"Minute"					   /Nibble[2],
-	"Second"					   /Nibble[2],
-	"ManufactuerCode"      /Nibble[2],
-	"ManufactuerSN"         /Nibble[4],
-	"BytesPerScan"         /Nibble[6],
-	"BaseScanInterval"      /Nibble[2], ##0.25ms(4),0.5ms(8),1ms(10),2ms(20),4ms(40)
-	"Polarity_untested"		  /Nibble,
-	"NotUsed"					 /Nibble[3],
+	"FileNumber"		 /Nibble[4],  	
+	"FormatCode"	/Nibble[4],		##8058 32 IEEE demultiplexed
+	"k1_k12" 	/Nibble[12],	##General Constants, from k1 to k12 #
+	"Year"	/Nibble[2],
+	"HDR"	/Nibble,
+	"Julian Day"	 /Nibble[3],
+	"Hour"	 /Nibble[2],
+	"Minute"	/Nibble[2],
+	"Second"	 /Nibble[2],
+	"ManufactuerCode"	/Nibble[2],
+	"ManufactuerSN"	 /Nibble[4],
+	"BytesPerScan"	 /Nibble[6],
+	"BaseScanInterval"	/Nibble[2], ##0.25ms(4),0.5ms(8),1ms(10),2ms(20),4ms(40)
+	"Polarity_untested"		/Nibble,
+	"NotUsed"	/Nibble[3],
 ################################################## testing!
-	"RecordType"			/Nibble,   ##8=normal,2 = test record
-	"RecordLength"			/Nibble[3],  ##extended record length used
+	"RecordType"	/Nibble,   ##8=normal,2 = test record
+	"RecordLength"	/Nibble[3],  ##extended record length used
 	"ScanTypePerRecord" /Nibble[2],
-	"ChanSetsNum"         /Nibble[2],  ##Variable
+	"ChanSetsNum"	/Nibble[2],  ##Variable
 	"SampleSkewNum"	/Nibble[2],  ##32byte extensions
 	"ExtendHeaderLen"   /Nibble[2],
 	"ExternalHeaderLen" /Nibble[2],
 )
-# # FD = open(BINARYFILE, 'rb')
-# # N =32
-# # FD.seek(0)  #omit the first N bytes on begining of SEG-D file
-# # BINDATA = FD.read(N)  #define reading block's length
-# # FileNum=ContainExtr(GenHeader_1.parse(BINDATA)["FileNumber"])
-# # FormatCode=ContainExtr(GenHeader_1.parse(BINDATA)["FormatCode"])
-# # k1_k12=ContainExtr(GenHeader_1.parse(BINDATA)["k1_k12"])
+FD = open(BINARYFILE, 'rb')
+N =32
+FD.seek(0)  #omit the first N bytes on begining of SEG-D file
+BINDATA = FD.read(N)  #define reading block's length
+FileNum=ContainExtr(GenHeader_1.parse(BINDATA)["FileNumber"])
+FormatCode=ContainExtr(GenHeader_1.parse(BINDATA)["FormatCode"])
+k1_k12=ContainExtr(GenHeader_1.parse(BINDATA)["k1_k12"])
 # # RecordLength=ContainExtrHexF(GenHeader_1.parse(BINDATA)["RecordLength"])
 # # ExternalHeaderLen=ContainExtrHexF(GenHeader_1.parse(BINDATA)["ExternalHeaderLen"])
 # # # # logging.debug(' GenHeader_1 Container is ', RecordLength)
@@ -78,19 +78,19 @@ GenHeader_1 = construct.BitStruct(
 # # FD.close()
 ####---------------- General header block #2 -------------------------####
 GenHeader_2 = construct.Struct(
-	"ef"				        /Int24ub,  	##Expanded file number
-	"en_NotUsed"		/Int16ub,		##8058 32 IEEE demultiplexed
-	"ecx_NotUsed"  	   /Int16ub,	##General Constants, from k1 to k12 #
-	"eh"					   /Int16ub, ##External header blocks(Variable)
-	"NA1"			       /Int8ub,    ##10 Not used
-	"rev"	     			   /Int8ub,    ## Rev 1.0
-	"gt"					   /Int16ub, ##13-14 Blocks of General trailer's number
-	"erl"					   	/Int32ub,   ##15-17 Extended record length(0-128000ms)
-	# "NA2"					/Int8ub,  ##18 Not used
-	"bn"				        /Int8ub,   ##19 General header Block Number(2)
-	"NA3"		            /Int8ub,   ##20 Not used(No comment on SEAL Manual)
-	"SeqNum"      /Int16ub,  ##Defaults to GUI setup,or updated by navigation system.
-	"NA4"					/Int8ub[10],
+	"ef"	 /Int24ub,  	##Expanded file number
+	"en_NotUsed"	/Int16ub,		##8058 32 IEEE demultiplexed
+	"ecx_NotUsed"	/Int16ub,	##General Constants, from k1 to k12 #
+	"eh"	/Int16ub, ##External header blocks(Variable)
+	"NA1"	/Int8ub,    ##10 Not used
+	"rev"	/Int8ub,    ## Rev 1.0
+	"gt"	/Int16ub, ##13-14 Blocks of General trailer's number
+	"erl"		/Int32ub,   ##15-17 Extended record length(0-128000ms)
+	# "NA2"		/Int8ub,  ##18 Not used
+	"bn"	/Int8ub,   ##19 General header Block Number(2)
+	"NA3"	/Int8ub,   ##20 Not used(No comment on SEAL Manual)
+	"SeqNum"	/Int16ub,  ##Defaults to GUI setup,or updated by navigation system.
+	"NA4"	/Int8ub[10],
 )
 # FD = open(BINARYFILE, 'rb')
 # N =32
