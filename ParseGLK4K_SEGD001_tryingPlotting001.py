@@ -39,10 +39,11 @@ FD.close()
 
 
 t = 2 * np.arange(SL/2 )
-# plt.xlim(-1e8,1e8)
+plt.xlim(-0.02,0.01)
 plt.ylim(len(t),0)
-plt.plot(Data[5],t)
-plt.xlabel('Ch01')
+plt.fill_betweenx(t,Data[0])
+# plt.fill(Data[0],t)
+plt.xlabel('Channel')
 plt.ylabel('Time')
 plt.show()
 # labels = ["Chan01", "Chan02", "Chan03"]
