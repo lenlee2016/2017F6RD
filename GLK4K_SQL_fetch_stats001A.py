@@ -25,9 +25,9 @@ SP          = []
 GunPort = []
 Delay     = []
 Fire        = []
-result1   = []
-result2   = []
-GP        = 1
+result1   = []  ##some changes could be done here.
+result2   = []  ##some changes could be done here.
+GP        = 1  ## choose the  Gun Port Number here.
 fig,axes = plt.subplots(len(LineSummary), 2)  #Set the Column 1
 plt.subplots_adjust(bottom=0.05, right=0.8, top=0.95)
 axes = axes.flatten()
