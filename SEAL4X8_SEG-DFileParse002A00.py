@@ -3,7 +3,10 @@
 to extract the external header for all information
 about  Navigation external header,
 source array and guns' firing header information'''
-# # # protype made 18th June 2016
+''' input the D1 data for testing,
+SPECTRA navigation header version 0003,
+header information ended@Vessel ID'''
+# # # protype made 15th April 2017
 import os
 import glob
 import sqlite3
@@ -13,7 +16,7 @@ logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %
 logging.debug('Start of program')
 def TabCre(TabLIST):
 	ExeStr = ' CREATE TABLE ' + TabLIST[0] + '( '\
-		  +TabLIST[1] +' ' + TabLIST[2] +' PRIMARY KEY '\
+          +TabLIST[1] +' ' + TabLIST[2] +' PRIMARY KEY '\
 		  'UNIQUE NOT NULL'\
 		  ')'
 	cursor.execute(ExeStr)
@@ -24,17 +27,20 @@ def TabIndxADD(TabLIST):
 		cursor.execute(ExeStr)
 def InstValue(TabLIST, ValuLIST):
 	ExeStr= 'INSERT INTO ' + TabLIST[0]\
-				+ '  VALUES (' +','.join(ValuLIST[1:len(ValuLIST)]) +')'
+				+ '  VALUES (' +','.join(str(v) for v in ValuLIST[1:len(ValuLIST)]) +')'
 	cursor.execute(ExeStr)
 TabNAV  = ['TabNavHead_LineName', #Table Name,each line's name
 		  'SP','INTEGER',     #Primary Key
 		  'Time','Time',
 		  'Date','Date',
-		  'WD','REAL',
+		  'LineName','CHAR',
 		  'Mast_Lat','REAL',
 		  'Mast_Long','REAL',
+		  'WD','REAL',
 		  'Src_Lat','REAL',
 		  'Src_Long','REAL',
+		  'Mast_Gyro','REAL',
+		  'Mast_CMG','REAL',
 		  'Mast_Sb','REAL']
 TabSRC = ['TabSrcInfo_LineName', #Table Name,each line's name
 		  'SP','INTEGER',     #Primary Key
@@ -73,8 +79,10 @@ def SEG_D_HeaderParse(THE_LIST, ARG1, ARG2, ARG3):
     Index = ARG3
     GUN_STR_OFSET = 90+GUNSTRINGS*4
     GUNS = list(range(GUNSTOTALNUM))
-    Omit = 32*3 + 32*16 + 1024 + 125
-    SrcBlk= 90 + GUNSTRINGS*4 + GUNSTOTALNUM*22
+    Omit = 32*3 + 32*16 + 1024
+    NL= 125
+    '''SPECTRA Navigation external header length is 125byts on D1(2015)'''
+    SrcBlk= NL + 90 + GUNSTRINGS*4 + GUNSTOTALNUM*22
     for SEGD_SHOTFILE in THE_LIST:
         BINARYFILE = SEGD_SHOTFILE
         FD = open(BINARYFILE, 'rb')
@@ -82,37 +90,66 @@ def SEG_D_HeaderParse(THE_LIST, ARG1, ARG2, ARG3):
         FD.seek(Omit)  #omit the first 96 bytes on begining of SEG-D file
         BINDATA = FD.read(SrcBlk) #define the external header's length
         BINSTR = String(SrcBlk, encoding="utf8").parse(BINDATA)
-        if (BINSTR[1:6] == "GCS90"):
+        if (BINSTR[0:2] == "$1"):
             GO=' '
         else:
-            print("\n Missed External header!")
+            print("\n Missed External header(Nav & Guns')!")
+            print("LineID:  ", LINE)
+            print("FileID  ", SEGD_SHOTFILE)
+            continue
+        NavHead  =[0]
+        Hours     = str(BINSTR[12:14])
+        Minutes  = str(BINSTR[14:16])
+        Seconds= str(BINSTR[16:25])
+        Time = Hours+":"+Minutes+":"+Seconds
+        NavHead.append('"'+Time+'"')
+        Year     = str(BINSTR[25:29])
+        Month  = str(BINSTR[29:31])
+        Day= str(BINSTR[31:33])
+        Date = Year+"/"+Month+"/"+Day
+        NavHead.append('"'+Date+'"')		
+        NavHead.insert(1, BINSTR[36:42])
+        NavHead.append('"'+BINSTR[42:58]+'"') # Survey Line Name
+        NavHead.append(BINSTR[58:69])
+        NavHead.append(BINSTR[69:80])
+        NavHead.append(BINSTR[80:86]) # Water depth
+        NavHead.append(BINSTR[86:97]) # Source Latitude
+        NavHead.append(BINSTR[97:108]) # Source Longitude
+        NavHead.append(BINSTR[108:113]) #Master Gyro
+        NavHead.append(BINSTR[113:118]) #Master CMG
+        NavHead.append(BINSTR[118:122]) #Master ship speed
+        InstValue(TabNAV,NavHead)        
+        if (BINSTR[NL+1:NL+6] == "GCS90"):
+            GO=' '
+        else:
+            print("\n Missed Source External header!")
             print("LineID:  ", LINE)
             print("FileID  ", SEGD_SHOTFILE)
             continue
         RawValue =[0]
         try:
-            RawValue.append(BINSTR[18:28])    #ShotPointNum
+            RawValue.append(BINSTR[NL+18:NL+28])    #ShotPointNum
         except:
             RawValue.append(0)
-        RawValue.append("'"+BINSTR[30:31]+"'")    #TriggerMode
-        RawValue.append("'20"+BINSTR[31:39]+"'")    #ShotDate, Prefix 20
-        RawValue.append('"'+str(BINSTR[40:48])+'"') #Insert Shooting Time
-        RawValue.append(BINSTR[48:49])    #Current Sequence
-        RawValue.append(BINSTR[52:54])    #Active Gun Num
+        RawValue.append('"'+BINSTR[NL+30:NL+31]+'"')    #TriggerMode
+        RawValue.append("'20"+BINSTR[NL+31:NL+39]+"'")    #ShotDate, Prefix 20
+        RawValue.append('"'+BINSTR[NL+40:NL+48]+'"') #Insert Shooting Time
+        RawValue.append(BINSTR[NL+48:NL+49])    #Current Sequence
+        RawValue.append(BINSTR[NL+52:NL+54])    #Active Gun Num
         try:
-            RawValue.append("%.2f"%(float(BINSTR[60:63])*0.1))    #Spread, Real #Delta Spread for Total Array(0.1ms)
+            RawValue.append("%.2f"%(float(BINSTR[NL+60:NL+63])*0.1))    #Spread, Real #Delta Spread for Total Array(0.1ms)
         except:
             RawValue.append('0')
-        RawValue.append(BINSTR[63:68])    #Volume Fired
+        RawValue.append(BINSTR[NL+63:NL+68])    #Volume Fired
         RawValue.append('0')
         RawValue.append('0')
         # RawValue.append("%.2f"%(float(BINSTR[68:73])))    #Average Delta# NN.NN
         # RawValue.append("%.3f"%(float(BINSTR[73:78])))    #Average Deviation of Delta#N.NNN
-        RawValue.append(BINSTR[82:86])    #Manifold
+        RawValue.append(BINSTR[NL+82:NL+86])    #Manifold
         '''The offset 0 to 90 contained
     the fixed GCS90(SYNTRAK) header information'''
         for string in range(GUNSTRINGS):
-            RawValue.append(BINSTR[(90+string*4):(94+string*4)])
+            RawValue.append(BINSTR[(NL+90+string*4):(NL+94+string*4)])
             # SAVE.write(';GunString No.'+str(string+1)+' Pres.:'+\
             #                         BINSTR[(90+string*4):(94+string*4)])
         # # # '''The each single gun's firing detail'''
@@ -122,7 +159,7 @@ def SEG_D_HeaderParse(THE_LIST, ARG1, ARG2, ARG3):
         for GUN in GUNS:
             GunValue.append(RawValue[1])# the SP number
             GunValue.insert(1, str(Index))  # insert the Index
-            Temp = BINSTR[(GUN_STR_OFSET+0+GUN*22):(GUN_STR_OFSET+ 2+GUN*22)]
+            Temp = BINSTR[(NL+GUN_STR_OFSET+0+GUN*22):(NL+GUN_STR_OFSET+ 2+GUN*22)]
             if Temp:
                 GunValue.append(Temp) #GunPortNo
             else:
@@ -130,37 +167,37 @@ def SEG_D_HeaderParse(THE_LIST, ARG1, ARG2, ARG3):
                 print("LineID====:  ", LINE)
                 print("FileID====  ", SEGD_SHOTFILE)
                 continue	
-            GunValue.append("'"+BINSTR[(GUN_STR_OFSET+2+GUN*22):\
-				    (GUN_STR_OFSET+ 3+GUN*22)]+"'") #Gun Mode
-            GunValue.append("'"+BINSTR[(GUN_STR_OFSET+3+GUN*22):\
-					(GUN_STR_OFSET+ 4+GUN*22)]+"'") # Detect Mode
-            GunValue.append(BINSTR[(GUN_STR_OFSET+4+GUN*22):\
-	              (GUN_STR_OFSET+ 5+GUN*22)]) # Sequence Mode
-            GunValue.append("'"+BINSTR[(GUN_STR_OFSET+5+GUN*22):\
-	              (GUN_STR_OFSET+ 6+GUN*22)]+"'") # AutoFire Mode YES/NO
+            GunValue.append("'"+BINSTR[(NL+GUN_STR_OFSET+2+GUN*22):\
+				    (NL+GUN_STR_OFSET+ 3+GUN*22)]+"'") #Gun Mode
+            GunValue.append("'"+BINSTR[(NL+GUN_STR_OFSET+3+GUN*22):\
+					(NL+GUN_STR_OFSET+ 4+GUN*22)]+"'") # Detect Mode
+            GunValue.append(BINSTR[(NL+GUN_STR_OFSET+4+GUN*22):\
+	              (NL+GUN_STR_OFSET+ 5+GUN*22)]) # Sequence Mode
+            GunValue.append("'"+BINSTR[(NL+GUN_STR_OFSET+5+GUN*22):\
+	              (NL+GUN_STR_OFSET+ 6+GUN*22)]+"'") # AutoFire Mode YES/NO
             try:
-                GunValue.append("%.2f"%(int(BINSTR[(GUN_STR_OFSET+ 7+GUN*22):\
-	              (GUN_STR_OFSET+ 10+GUN*22)])*0.1))#
+                GunValue.append("%.2f"%(int(BINSTR[(NL+GUN_STR_OFSET+ 7+GUN*22):\
+	              (NL+GUN_STR_OFSET+ 10+GUN*22)])*0.1))#
             except:
                 GunValue.append('0')
             try:
-                GunValue.append("%.2f"%(int(BINSTR[(GUN_STR_OFSET+10+GUN*22):\
-	              (GUN_STR_OFSET+ 13+GUN*22)])*0.1)) #
+                GunValue.append("%.2f"%(int(BINSTR[(NL+GUN_STR_OFSET+10+GUN*22):\
+	              (NL+GUN_STR_OFSET+ 13+GUN*22)])*0.1)) #
             except:
                 GunValue.append('0') #
             try:
-                GunValue.append("%.2f"%(int(BINSTR[(GUN_STR_OFSET+13+GUN*22):\
-	              (GUN_STR_OFSET+ 16+GUN*22)])*0.1))#
+                GunValue.append("%.2f"%(int(BINSTR[(NL+GUN_STR_OFSET+13+GUN*22):\
+	              (NL+GUN_STR_OFSET+ 16+GUN*22)])*0.1))#
             except:
                 GunValue.append('0')#
             try:
-                GunValue.append("%.2f"%(int(BINSTR[(GUN_STR_OFSET+16+GUN*22):\
-	              (GUN_STR_OFSET+ 19+GUN*22)])*0.1))#
+                GunValue.append("%.2f"%(int(BINSTR[(NL+GUN_STR_OFSET+16+GUN*22):\
+	              (NL+GUN_STR_OFSET+ 19+GUN*22)])*0.1))#
             except:
                 GunValue.append('0')#
             try:
-                GunValue.append("%.1f"%(int(BINSTR[(GUN_STR_OFSET+19+GUN*22):\
-	              (GUN_STR_OFSET+ 22+GUN*22)])*0.1))#
+                GunValue.append("%.1f"%(int(BINSTR[(NL+GUN_STR_OFSET+19+GUN*22):\
+	              (NL+GUN_STR_OFSET+ 22+GUN*22)])*0.1))#
             except:
                 GunValue.append('0')#
             InstValue(TabGUN, GunValue)
@@ -168,15 +205,15 @@ def SEG_D_HeaderParse(THE_LIST, ARG1, ARG2, ARG3):
             Index=Index+1
         FD.close()
 sqlite3.PrepareProtocol()
-SEGD_FOLD = "I:/MX1_lines/"
+SEGD_FOLD = "I:/MX1_lines_raw/"
 os.chdir(SEGD_FOLD)
 LINES = glob.glob('MX1_*')       
-connection = sqlite3.connect('e:/mySQLite/15MX_D1_LinesSrcGun001.sqlite')
+connection = sqlite3.connect('e:/mySQLite/15MX_D1_LinesNavSrcGun003.sqlite')
 cursor = connection.cursor()
 cursor.execute(" PRAGMA synchronous = OFF ")
 cursor.execute(" PRAGMA CACHE_SIZE = 9000000 ")
 for LINE in LINES:
-	TabNav[0]  = 'TabNav_' + LINE
+	TabNAV[0]  = 'TabNav_' + LINE
 	TabSRC[0] = 'TabSrc_' + LINE
 	TabGUN[0] = 'TabGun_' + LINE
 	BS = "E:/mypython/"+LINE+"SEAL4X8_SEG-D_ExtHed01.txt"
