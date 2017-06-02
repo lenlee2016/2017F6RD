@@ -1,0 +1,237 @@
+---
+title: "M/V DISCOVERER Source QC Report"
+author: "Lenlee Lijia @ M/V DISCOVERER"
+output:
+  pdf_document:
+    fig_height: 8.5
+    fig_width: 14
+classoption: landscape
+---
+
+##Survey Area: DongHai XiHu
+##Survey Type: Walkaway VSP/shooting
+##Client: CCCCCC
+
+```{r setup, echo=FALSE}
+##2017 Walkaway VSP drill
+##DongHai(East China Sea), XiHu
+##May 2017
+##Parse the extracted Bigshot GunLog(single file)
+##to plot the RAW data value figures in one PDF file
+library(RODBC)
+library(xtable)
+library(lattice)
+library(ggplot2)
+#Input the line name
+  sheet.xlsx <- "E:/mySQLite/2017NB19-6-1WVSPLines_SEQ01.xlsx"
+  con <-odbcConnectExcel2007(sheet.xlsx)
+  tbls <- sqlTables(con)
+  tb.name <- substr(tbls$TABLE_NAME,2,nchar(tbls$TABLE_NAME)-2)
+  tb.list <- sqlFetch(con,tb.name)
+  odbcClose(con)
+  line.name <- c()
+  GunTotNum <- 44
+  GunString    <- c(1, 2, 3, 4)
+  GunArrayNum <- length(GunString)
+  AimingPoint <- 50.0
+  PressMax <- 1975
+  PressMIN <- 1860
+  DepthTop <- 5.0
+  DepthBot <- 7.4
+  GunVolume <- data.frame(GunPort=c(1:GunTotNum),
+## 2017 DongHai XIHu NB19-6-1 Walkaway VSP D1 source array
+## 21st May to 23rd May
+  Volume=c(200, 200, 70, 70, 120, 100, 100, 60, 60, 60, 40,
+           150, 150, 70, 70, 120,  100, 100, 70, 70, 80, 40,
+           150, 150, 70, 70, 120,  100, 100, 70, 70, 80, 40,
+           200, 200, 70, 70, 120,  100, 100, 40, 40, 80, 70)
+  )
+  #The function for mapping gun port to the gun number& volume
+  # in the source sub-array layout
+  Mapping <- function(GunPort){
+    GNumPerStr= round(GunTotNum/GunArrayNum,0)
+    GSN <- 1+GunPort%/%GNumPerStr
+    GN  <- GunPort%%GNumPerStr
+    GSN <- ifelse(GN==0, GSN-1, GSN)
+    DSN <- (GunPort - (GSN-1)*GNumPerStr)/3##This should be CHANGE in different SOURCE ARRAY
+    GN <- ifelse(GN==0, GNumPerStr, GN)
+    GN <- ifelse(GN>0&GN<=9, paste('0',GN,sep=''),GN) ## KEEP the 9(NINE) for digits format
+    tmp.data <- data.frame()
+    tmp.data<- cbind.data.frame(GSN,GN,paste(GunVolume[GunPort,]$Volume,"CI",sep=""),DSN)
+    return(tmp.data)
+  }
+  press.summ <- data.frame()
+  ##--------------------------------------------------------------------------------------------------##
+  #The function for mapping the gun depth sensor's location to gun Port number
+  #And create the location of  the sub-array's pressure sensor 
+  Mapping01<- function(GunPort){
+    GNumPerStr= round(GunTotNum/GunArrayNum,0)
+    GSN <- 1+GunPort%/%GNumPerStr
+    GN  <- GunPort%%GNumPerStr
+    GSN <- ifelse(GN==0, GSN-1, GSN)
+    DSN <- (GunPort - (GSN-1)*GNumPerStr)/3##This should be CHANGE in different SOURCE ARRAY
+    tmp.data <- data.frame()
+    tmp.data<- cbind.data.frame(GSN,DSN)
+    return(tmp.data)
+  }
+  ####---------------------------------------------------------------------------------####  
+```
+
+###Lines summary table###
+````{r lines table,echo=FALSE}
+knitr::kable(tb.list)
+````
+
+\pagebreak
+```{r create plots and ploting, echo=FALSE, results='asis'}
+  count <- 1
+  for(line.name in tb.list$Line){
+    FSP<- tb.list$FSP[tb.list$Line==line.name]
+    LSP<- tb.list$LSP[tb.list$Line==line.name]
+    HDG<-tb.list$HDG[tb.list$Line==line.name]
+    line.title <- paste("2017 DongHai XiHu NB19-6-1 Walkaway VSP    " ,
+                                "SEQ: ",tb.list$SeqNo[tb.list$Line==line.name],
+                                "LINE: ",line.name,
+                                "FSP:",FSP," LSP:",LSP,"Direction:", HDG, 
+                        sep=' ')
+    setwd('F:/DISCOVERER1_Bakups/Bigshot_rawdata/OBS/GUN LOG/LogExtracts/')
+   ####---------------------------------------------------------------------------------####
+    PressFile.name <- paste("PressExtra_",line.name,".txt",sep='')
+    press.value <- read.table(file=PressFile.name, header = TRUE)
+    p11 <- qplot(SP, Pressure, data=press.value, geom="line",
+             ylim=c(PressMIN, PressMax),
+             ylab="Pressure Value(PSI)",group=GSN) +
+          facet_grid(GSN ~ ., scale="free_y") +
+          labs(title="Source Sub-array Pressure Value") +
+          theme(strip.text.y=element_text(size=12,colour="blue",angle=0),
+                plot.title = element_text(size = 28, face="bold"),
+                axis.title = element_text(size = 24, face="bold"))
+    # print(p11)
+    ##----------------Pressure values KDE plotting------------------------------------------==
+    press.value$GunStringNum <- paste("Source Sub-array No.",
+                                      substr(press.value$GSN,4,5),sep='')
+    press.max <- max(press.value$Pressure)
+    press.min <- min(press.value$Pressure)
+     #set the threshold value for density plotting
+    press.max <- ifelse(abs(press.max -PressMax)< 5 , PressMax+20, press.max)
+    press.min <- ifelse(press.min > PressMIN+50, press.min, PressMIN+50)
+    p12 <- qplot(Pressure, data = press.value,geom = "density",
+            xlim=c(press.min-3,press.max+3),
+            fill = GunStringNum,
+            alpha=I(0.2)) +
+            labs(title="Gun Sub-array Pressure Value Compare(KDE)") +
+            theme(plot.title = element_text(size = 28, face="bold"),
+                  axis.title = element_text(size = 24, face="bold"))
+    # print(p12)
+    ##----------------Pressure values all line combination---------------------------==
+    with(press.value,{
+     TmpString <- rep(GunString,length(unique(press.value$SP)))
+     TmpString <- cbind(TmpString)
+     press.value <- cbind(press.value, TmpString)
+     Me <- tapply(Pressure, TmpString, mean)
+     Max <- tapply(Pressure, TmpString, max)
+     Min <- tapply(Pressure, TmpString, min)
+     press.summ <<- rbind(press.summ,cbind(Me, Max, Min))
+    })
+    ####---------------------------------------------------------------------------------####
+    DepthFile.name <- paste("DepthExtra_",line.name,".txt",sep='')
+    depth.value <- read.table(file=DepthFile.name, header=TRUE)
+    TempData <- Mapping01(depth.value$GP)
+    ####modify the columns' name for the tempory dataframe
+    colnames(TempData) <- c('GSN','DSN')
+    depth.value$Sensor <- paste(TempData$GSN,"-",TempData$DSN,sep='')
+    p21 <- qplot(SP, Depth, data=depth.value,geom="line",
+                ylab="Gun Depth (meters)",group = Sensor)+
+                facet_grid(Sensor ~ .,scale="fixed")+
+                labs(title="Gun Depth Sensor data") +
+                theme(strip.text.y=element_text(size=12,colour="blue",angle =0),
+                      plot.title = element_text(size = 28, face="bold"),
+                      axis.title=element_text(size=24,face="bold"))+
+                scale_y_reverse(expand=c(0.1,0),limits=c(DepthBot, DepthTop))
+    # print(p21)
+##----------------------------------------------------------------------------------##
+    p22 <- ggplot(depth.value,aes(Sensor, Depth))+geom_boxplot()+
+                    scale_y_reverse() +
+           labs(title="Gun Depth Sensor data Compare(box-plot)") +
+           theme(plot.title = element_text(size = 28, face="bold"),
+                 axis.title = element_text(size=24,face="bold"))
+    # print(p22)
+####---------------------------------------------------------------------------------####
+    ExtLog.name <- paste("GunsExtra_",line.name,".txt",sep='')
+    guns.dat <- read.table(file=ExtLog.name,header=TRUE)
+    colnames(guns.dat)<- c('Index','SP','SRC','GP','Mode','Fire','Delay')
+    guns.dat$Delta <- guns.dat$Fire - AimingPoint
+    ShowData <- Mapping(guns.dat$GP)
+    ####modify the columns' name for the tempory dataframe
+    colnames(ShowData) <- c('GSN','GN','VOL')
+    guns.dat$GSN <- ShowData$GSN #add the column gun string No.
+    guns.dat$GN <- ShowData$GN      #add the column gun number
+    guns.dat$VOL <- ShowData$VOL #add the column gun volumn
+    p31 <- (xyplot(Delta ~ SP |factor(paste("GS",guns.dat$GSN,
+                                          "-G",guns.dat$GN,
+                                          " ",guns.dat$VOL,sep="")),
+                 type="l",
+                 xlim =c(FSP,LSP),
+                 ylim = c(-1.6,1.6),
+                 cex.axis = 3.0,
+                 ylab = "Single Gun Delta(millisecond)",
+                 as.table = TRUE,
+                 grid = TRUE,
+                 # main= paste(line.title,"FSP:",FSP," LSP:",LSP,"Direction:", HDG, sep=' '),
+                 scales = list(x= list(rot=45),y = list(alternating =3)),
+                 par.strip.text=list(cex=0.9,font=6,lines=0.8), #fit all strip's text in the fixed wideth.
+                 data=guns.dat))
+    # print(p31)
+####---------------------------------------------------------------------------------####
+    cat(line.title)
+    cat("\\newline")
+    print(p11)
+    print(p12)
+    print(p21)
+    print(p22)
+    print(p31)
+    cat("\\newpage\n")
+    count <- count +1
+####---------------------------------------------------------------------------------####
+##TODO MORE
+  }
+  loop.num <- length(tb.list$SeqNo)
+  col.stringnum <- rep(GunString, loop.num)
+  press.summ  <- cbind.data.frame(col.stringnum,press.summ)
+  colnames(press.summ) <- c("GunString","Me","Max","Min")
+  seqnum <- seq(from = 1, to =(count-1), 1)
+  seqnum <- rep(seqnum, each=4)
+  col.seqnum <- cbind(seqnum)
+  press.summ <- cbind.data.frame(col.seqnum, press.summ)
+  p41 <- qplot(seqnum, Me, data=press.summ,geom="line",
+            group = GunString,
+            colour = factor(GunString),
+            size = I(3),
+            xlab = "Line Sequence Number",
+            ylab = "Pressure(PSI)")+
+            labs(title=line.title,
+                   subtitle = "Each Source Sub-array MEAN Pressure Value")
+  # print(p41)
+  p42 <- qplot(seqnum, Max, data=press.summ,geom="line",
+            group = GunString,
+            colour = factor(GunString),
+            size = I(3),
+            xlab = "Line Sequence Number",
+            ylab = "Pressure(PSI)")+
+            labs(title=line.title,
+                   subtitle = "Each Source Sub-array MAX Pressure Value")
+  # print(p42)
+  p43 <- qplot(seqnum, Min, data=press.summ,geom="line",
+            group = GunString,
+            colour = factor(GunString),
+            size = I(3),
+            xlab = "Line Sequence Number",
+            ylab = "Pressure(PSI)")+
+            labs(title=line.title,
+                   subtitle = "Each Source Sub-array MIN Pressure Value")
+  # print(p43)  
+  print(p41)
+  print(p42)
+  print(p43)
+```
+
