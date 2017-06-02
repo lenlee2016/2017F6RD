@@ -3,7 +3,7 @@ title: "M/V DISCOVERER Source QC Report"
 author: "Lenlee Lijia @ M/V DISCOVERER"
 output:
   pdf_document:
-    fig_height: 8.5
+    fig_height: 9.5
     fig_width: 14
 classoption: landscape
 ---
@@ -151,7 +151,7 @@ knitr::kable(tb.list)
     # print(p21)
 ##----------------------------------------------------------------------------------##
     p22 <- ggplot(depth.value,aes(Sensor, Depth))+geom_boxplot()+
-                    scale_y_reverse() +
+                    scale_y_reverse() +       
            labs(title="Gun Depth Sensor data Compare(box-plot)") +
            theme(plot.title = element_text(size = 28, face="bold"),
                  axis.title = element_text(size=24,face="bold"))
@@ -167,20 +167,30 @@ knitr::kable(tb.list)
     guns.dat$GSN <- ShowData$GSN #add the column gun string No.
     guns.dat$GN <- ShowData$GN      #add the column gun number
     guns.dat$VOL <- ShowData$VOL #add the column gun volumn
-    p31 <- (xyplot(Delta ~ SP |factor(paste("GS",guns.dat$GSN,
-                                          "-G",guns.dat$GN,
-                                          " ",guns.dat$VOL,sep="")),
-                 type="l",
-                 xlim =c(FSP,LSP),
-                 ylim = c(-1.6,1.6),
-                 cex.axis = 3.0,
-                 ylab = "Single Gun Delta(millisecond)",
-                 as.table = TRUE,
-                 grid = TRUE,
-                 # main= paste(line.title,"FSP:",FSP," LSP:",LSP,"Direction:", HDG, sep=' '),
-                 scales = list(x= list(rot=45),y = list(alternating =3)),
-                 par.strip.text=list(cex=0.9,font=6,lines=0.8), #fit all strip's text in the fixed wideth.
-                 data=guns.dat))
+    p31 <- ggplot(guns.dat,aes(x = SP, y = Delta)) + geom_line(size=0.5, colour="blue") +
+            facet_wrap(~ paste("GS",guns.dat$GSN,
+                               "-G",guns.dat$GN,
+                               "  ",guns.dat$VOL,sep=""))  +
+             coord_cartesian(ylim = c(-1.5, 1.5))   +
+           # scale_y_continuous(limits = c(-1.6,1.6),
+           #                    breaks = c(-1.5,-1.0,0,1.0,1.5)) +
+           labs(title="All Gun's Firing Delay in one line") +
+           theme(plot.title = element_text(size = 28, face="bold"),
+                 axis.title = element_text(size=24,face="bold"))
+    # p31 <- (xyplot(Delta ~ SP |factor(paste("GS",guns.dat$GSN,
+    #                                       "-G",guns.dat$GN,
+    #                                       " ",guns.dat$VOL,sep="")),
+    #              type="l",
+    #              xlim =c(FSP,LSP),
+    #              ylim = c(-1.6,1.6),
+    #              cex.axis = 3.0,
+    #              ylab = "Single Gun Delta(millisecond)",
+    #              as.table = TRUE,
+    #              grid = TRUE,
+    #              # main= paste(line.title,"FSP:",FSP," LSP:",LSP,"Direction:", HDG, sep=' '),
+    #              scales = list(x= list(rot=45),y = list(alternating =3)),
+    #              par.strip.text=list(cex=0.9,font=6,lines=0.8), #fit all strip's text in the fixed wideth.
+    #              data=guns.dat))
     # print(p31)
 ####---------------------------------------------------------------------------------####
     cat(line.title)
